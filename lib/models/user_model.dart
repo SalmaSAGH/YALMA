@@ -4,12 +4,14 @@ class User {
   final String fullName;
   final String email;
   final String password;
+  final String phone; // Nouveau champ ajouté
   final BankAccount? bankAccount;
 
   User({
     required this.fullName,
     required this.email,
     required this.password,
+    required this.phone, // Paramètre requis ajouté
     this.bankAccount,
   });
 
@@ -29,21 +31,21 @@ class User {
       fullName: jsonMap['fullName'] ?? '',
       email: jsonMap['email'] ?? '',
       password: jsonMap['password'] ?? '',
+      phone: jsonMap['phone'] ?? '', // Désérialisation du champ phone
       bankAccount: bankAccount,
     );
   }
-
 
   Map<String, dynamic> toJson() {
     return {
       'fullName': fullName,
       'email': email,
       'password': password,
+      'phone': phone, // Sérialisation du champ phone
       'bankAccount': bankAccount?.toJson(),
     };
   }
 }
-
 
 class BankAccount {
   final String cardHolderName;
