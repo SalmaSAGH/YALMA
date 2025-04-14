@@ -4,6 +4,8 @@ import '../widgets/custom_button.dart';
 import '../models/user_model.dart';
 import '../services/local_storage_service.dart';
 import 'login_screen.dart';
+import 'package:flutter/services.dart';
+import 'package:country_code_picker/country_code_picker.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -20,20 +22,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _confirmPasswordController = TextEditingController();
   BankAccount? _bankAccount;
   bool _isLoading = false;
+  bool _obscureConfirmPassword = true;
+  bool _obscurePassword = true;
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  String _countryCode = '+1';
+
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
 
   Future<void> _register() async {
-    if (_formKey.currentState!.validate()) {
-      // Validation des mots de passe
-      if (_passwordController.text != _confirmPasswordController.text) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Les mots de passe ne correspondent pas')),
-        );
-        return;
-      }
-
+    if (_formKey.currentState?.validate() ?? false) {
       if (_bankAccount == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Veuillez lier un compte bancaire')),
+          const SnackBar(
+            content: Text('Veuillez lier un compte bancaire avant de continuer'),
+            duration: Duration(seconds: 2),
+          ),
         );
         return;
       }
@@ -42,43 +48,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       try {
         final user = User(
-          fullName: _fullNameController.text,
-          email: _emailController.text,
-          password: _passwordController.text,
+          fullName: _nameController.text.trim(),
+          email: _emailController.text.trim().toLowerCase(),
+          password: _passwordController.text.trim(),
+          phone: '$_countryCode${_phoneController.text.trim()}',
           bankAccount: _bankAccount,
         );
 
-        // Debug avant sauvegarde
-        debugPrint('Tentative de sauvegarde: ${user.email}');
-        debugPrint('BankAccount: ${user.bankAccount?.toJson()}');
-
-        // Sauvegarde avec vérification
         await LocalStorageService.forceSaveUser(user);
 
-        // Vérification après sauvegarde
-        final savedUsers = await LocalStorageService.getUsers();
-        debugPrint('Utilisateurs après sauvegarde: ${savedUsers.length}');
-        debugPrint('Dernier utilisateur: ${savedUsers.lastOrNull?.email}');
+        if (!mounted) return;
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Inscription réussie ! Vous allez être redirigé'),
-              duration: Duration(seconds: 2),
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LoginScreen(
+              preFilledEmail: _emailController.text,
             ),
-          );
+          ),
+        );
 
-          await Future.delayed(const Duration(seconds: 1));
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => LoginScreen(
-                preFilledEmail: _emailController.text,
-              ),
-            ),
-          );
-        }
       } catch (e) {
         debugPrint('ERREUR DURANT L\'INSCRIPTION: $e');
         if (mounted) {
@@ -97,170 +86,320 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
+  Future<void> _navigateToBankAccount() async {
+    final result = await Navigator.push<BankAccount>(
+      context,
+      MaterialPageRoute(builder: (context) => const BankAccountScreen()),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _bankAccount = result;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Compte bancaire lié avec succès'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Inscription'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
+        backgroundColor: Colors.white,
+        elevation: 0,
       ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _fullNameController,
-                decoration: InputDecoration(
-                  labelText: 'Nom complet',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular  (10),
+      body: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: Column(
+              children: [
+                const SizedBox(height: 30),
+
+                // Champ Full Name
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF2F2F7),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  prefixIcon: const Icon(Icons.person),
-                ),
-                validator: (value) =>
-                value?.isEmpty ?? true ? 'Ce champ est obligatoire' : null,
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  prefixIcon: const Icon(Icons.email),
-                ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value?.isEmpty ?? true) return 'Ce champ est obligatoire';
-                  if (!value!.contains('@')) return 'Email invalide';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _passwordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: 'Mot de passe (min. 6 caractères)',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  prefixIcon: const Icon(Icons.lock),
-                ),
-                validator: (value) {
-                  if (value?.isEmpty ?? true) return 'Ce champ est obligatoire';
-                  if (value!.length < 6) return 'Minimum 6 caractères';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _confirmPasswordController,
-                obscureText: true,
-                decoration: InputDecoration(
-                  labelText: 'Confirmer le mot de passe',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  prefixIcon: const Icon(Icons.lock),
-                ),
-                validator: (value) {
-                  if (value != _passwordController.text) {
-                    return 'Les mots de passe ne correspondent pas';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              if  (_bankAccount != null)
-                ListTile(
-                  leading: const Icon(Icons.check_circle, color: Colors.green),
-                  title: const Text('Compte bancaire lié'),
-                  subtitle: Text(
-                    _bankAccount!.cardNumber.length >= 4
-                        ? '•••• •••• •••• ${_bankAccount!.cardNumber.substring(_bankAccount!.cardNumber.length - 4)}'
-                        : '•••• •••• •••• (incomplet)',
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit),
-                    onPressed: () async {
-                      final result = await Navigator.push<BankAccount>(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const  BankAccountScreen(),
-                        ),
-                      );
-                      if (result != null) {
-                        setState(() => _bankAccount = result);
+                  child: TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Full Name',
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 18,
+                      ),
+                      floatingLabelBehavior: FloatingLabelBehavior.never,
+                    ),
+                    style: const TextStyle(fontSize: 17),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez entrer votre nom complet';
                       }
+                      return null;
                     },
                   ),
-                )
-              else
-                OutlinedButton(
-                  onPressed: () async {
-                    final result = await Navigator.push<BankAccount>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const BankAccountScreen(),
-                      ),
-                    );
-                    if (result != null) {
-                      setState(() => _bankAccount = result);
-                    }
-                  },
-                  style: OutlinedButton.styleFrom(
-                    minimumSize:  const Size(double.infinity, 50),
-                    side: const BorderSide(color: Colors.blue),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
+                ),
+                const SizedBox(height: 16),
+
+                // Champ Email
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF2F2F7),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const  Row(
+                  child: TextFormField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      hintText: 'exemple@domaine.com',
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 18,
+                      ),
+                      floatingLabelBehavior: FloatingLabelBehavior.never,
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    style: const TextStyle(fontSize: 17),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez entrer votre email';
+                      }
+                      if (!_isValidEmail(value)) {
+                        return 'Format email invalide';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Champ Phone
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF2F2F7),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      CountryCodePicker(
+                        onChanged: (country) => setState(() => _countryCode = country.dialCode!),
+                        initialSelection: 'US',
+                        favorite: const ['FR', 'US'],
+                        showCountryOnly: false,
+                        showOnlyCountryWhenClosed: false,
+                        alignLeft: false,
+                        padding: EdgeInsets.zero,
+                        textStyle: const TextStyle(fontSize: 17),
+                      ),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _phoneController,
+                          decoration: const InputDecoration(
+                            labelText: 'Phone number',
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 18,
+                            ),
+                            floatingLabelBehavior: FloatingLabelBehavior.never,
+                          ),
+                          keyboardType: TextInputType.phone,
+                          style: const TextStyle(fontSize: 17),
+                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Veuillez entrer votre numéro de téléphone';
+                            }
+                            if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
+                              return 'Chiffres seulement';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Champ Password
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF2F2F7),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: 'Password (min. 6 caractères)',
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 18,
+                      ),
+                      floatingLabelBehavior: FloatingLabelBehavior.never,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.grey,
+                        ),
+                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                      ),
+                    ),
+                    style: const TextStyle(fontSize: 17),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez entrer un mot de passe';
+                      }
+                      if (value.length < 6) {
+                        return 'Minimum 6 caractères';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Champ Confirmation Password
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF2F2F7),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: _obscureConfirmPassword,
+                    decoration: InputDecoration(
+                      labelText: 'Confirm Password',
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 18,
+                      ),
+                      floatingLabelBehavior: FloatingLabelBehavior.never,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.grey,
+                        ),
+                        onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                      ),
+                    ),
+                    style: const TextStyle(fontSize: 17),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez confirmer votre mot de passe';
+                      }
+                      if (value != _passwordController.text) {
+                        return 'Les mots de passe ne correspondent pas';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(height: 30),
+
+                // Bouton Lier compte bancaire
+                TextButton(
+                  onPressed: _navigateToBankAccount,
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.account_balance,  color: Colors.blue),
-                      SizedBox(width: 10),
+                      Icon(
+                        Icons.account_balance,
+                        color: _bankAccount != null ? Colors.green : Colors.blue,
+                      ),
+                      const SizedBox(width: 10),
                       Text(
-                        'Lier  un compte  bancaire',
+                        _bankAccount != null ? 'Compte bancaire lié ✓' : 'Lier un compte bancaire',
                         style: TextStyle(
-                          color:  Colors.blue,
+                          color: _bankAccount != null ? Colors.green : Colors.blue,
                           fontSize: 16,
                         ),
                       ),
                     ],
                   ),
                 ),
-              const  SizedBox(height: 30),
-              CustomButton(
-                text:  _isLoading ? 'Inscription  en cours...'  :  "S'inscrire",
-                onPressed:  _isLoading  ?  null  :  _register,
-              ),
-              const  SizedBox(height: 20),
-              TextButton(
-                onPressed:  ()  =>  Navigator.pop(context),
-                child:  const  Text(
-                  'Vous  avez  déjà  un  compte?  Connectez-vous',
-                  style:  TextStyle(fontSize: 16),
+                const SizedBox(height: 30),
+
+                // Bouton d'inscription
+                SizedBox(
+                  width: 250,
+                  height: 55,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (_bankAccount == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Veuillez d\'abord lier un compte bancaire'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      } else {
+                        _register();
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF007AFF),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      elevation: 0,
+                      shadowColor: Colors.transparent,
+                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                      "S'inscrire",
+                      style: TextStyle(
+                        fontSize: 23,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 20),
+
+                // Lien vers login
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    'Vous avez déjà un compte? Connectez-vous',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
-  }
-
-  @override
-  void  dispose() {
-    _fullNameController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
   }
 }

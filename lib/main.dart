@@ -11,8 +11,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LocalStorageService.init();
   await LocalStorageService.createAdminUser();
+  debugPrintRebuildDirtyWidgets = false;
 
   runApp(const MyApp());
+  MaterialApp(
+    debugShowCheckedModeBanner: false, // ← Ceci désactive la bannière
+    home: LoginScreen(),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -21,6 +26,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false, // ← Ceci désactive la bannière
       title: 'Transport App',
       initialRoute: '/',
       routes: {

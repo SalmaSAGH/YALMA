@@ -58,6 +58,7 @@ class LocalStorageService {
         fullName: 'Administrateur',
         email: AdminService.adminEmail,
         password: AdminService.adminPassword,
+          phone: '+10000000000',
       );
 
       debugPrint('Admin existe déjà ? $adminExists');
