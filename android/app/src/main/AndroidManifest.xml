@@ -7,7 +7,7 @@
         android:icon="@mipmap/ic_launcher">
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyCgqrW1cAnSKZK461QJsO3fQhDq8pDpoMc"/>
+            android:value="AIzaSyB8R17m4cxsmIwGDNlXAFKX6WcT68wKMpQ"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -49,5 +49,7 @@
     </queries>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+
 
 </manifest>

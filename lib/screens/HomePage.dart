@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 
+import 'JourneyPage.dart';
 import 'ProfilePage.dart';
 
 class HomePage extends StatefulWidget {
@@ -148,6 +149,8 @@ class _HomePageState extends State<HomePage> {
     Widget selectedPage;
     if (_selectedIndex == 1) {
       selectedPage = const ProfilePage(); // Affiche la page Profil
+    } else if (_selectedIndex == 2) {
+      selectedPage = const JourneyPage(); // Affiche la page Journey
     } else {
       selectedPage = Stack(
         children: [
@@ -246,5 +249,4 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
 }
