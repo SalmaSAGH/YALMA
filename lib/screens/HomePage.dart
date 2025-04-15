@@ -5,6 +5,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 
+import 'ProfilePage.dart';
+
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
@@ -142,22 +144,28 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
+    // Choisir la page à afficher selon l'onglet sélectionné
+    Widget selectedPage;
+    if (_selectedIndex == 1) {
+      selectedPage = const ProfilePage(); // Affiche la page Profil
+    } else {
+      selectedPage = Stack(
         children: [
           _currentPosition == null
               ? const Center(child: CircularProgressIndicator())
               : GoogleMap(
             onMapCreated: _onMapCreated,
             initialCameraPosition: CameraPosition(
-              target: LatLng(_currentPosition!.latitude,
-                  _currentPosition!.longitude),
+              target: LatLng(
+                _currentPosition!.latitude,
+                _currentPosition!.longitude,
+              ),
               zoom: 14,
             ),
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
             markers: Set<Marker>.of(_markers),
-            onTap: _onMapTapped, // Ajouter l'événement de tap
+            onTap: _onMapTapped,
           ),
           Positioned(
             top: 50,
@@ -200,7 +208,8 @@ class _HomePageState extends State<HomePage> {
                       markerId: const MarkerId('selected-location'),
                       position: target,
                       infoWindow: InfoWindow(title: suggestion),
-                      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+                      icon: BitmapDescriptor.defaultMarkerWithHue(
+                          BitmapDescriptor.hueRed),
                     ),
                   );
                 });
@@ -212,7 +221,11 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ],
-      ),
+      );
+    }
+
+    return Scaffold(
+      body: selectedPage,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -233,4 +246,5 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
 }
