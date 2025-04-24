@@ -26,7 +26,7 @@ class _SplashScreenState extends State<SplashScreen> {
       backgroundColor: Colors.white,
       body: Center(
         child: Image.asset(
-          'assets/logo.png', // Remplacez par votre logo
+          'assets/logo.png',
           width: 150,
           height: 150,
         ),
