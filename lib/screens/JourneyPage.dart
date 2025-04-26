@@ -8,7 +8,6 @@ import 'package:intl/intl.dart';
 import 'package:transport_app/screens/transport_step.dart';
 import 'RouteDetailsPage.dart';
 
-
 class JourneyPage extends StatefulWidget {
   const JourneyPage({Key? key}) : super(key: key);
 
@@ -20,20 +19,23 @@ class _JourneyPageState extends State<JourneyPage> {
   late GoogleMapController _mapController;
   Position? _currentPosition;
   final TextEditingController _destinationController = TextEditingController();
-  String? _selectedRouteType = 'transit';
+  String _selectedRouteType = 'transit';
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   bool _showSearchPanel = true;
   LatLng? _destination;
-  List<TransportStep> _routeSteps = [];
-  double _totalDistance = 0;
-  double _totalDuration = 0;
+
+  // Données pour les deux types de trajets
+  List<TransportStep> _transitSteps = [];
+  List<TransportStep> _drivingSteps = [];
+  double _transitDistance = 0;
+  double _drivingDistance = 0;
+  double _transitDuration = 0;
+  double _drivingDuration = 0;
   String _startAddress = '';
   String _endAddress = '';
   String _departureTime = '';
   String _arrivalTime = '';
-
-
 
   static const String _googleApiKey = 'AIzaSyDBbmmnmr09v4I5tVisCgZlQay6ZydtAoU';
   static const Map<String, LatLng> knownStations = {
@@ -183,23 +185,67 @@ class _JourneyPageState extends State<JourneyPage> {
         return;
       }
 
-      final mode = _selectedRouteType == 'transit' ? 'transit' : 'driving';
-      final response = await http.get(
+      // Récupérer les deux itinéraires en parallèle
+      final transitFuture = http.get(
         Uri.parse(
             'https://maps.googleapis.com/maps/api/directions/json?'
                 'origin=${_currentPosition!.latitude},${_currentPosition!.longitude}'
                 '&destination=${_destination!.latitude},${_destination!.longitude}'
-                '&mode=$mode'
+                '&mode=transit'
                 '&key=$_googleApiKey'
                 '&language=fr'
                 '&region=ma'
         ),
       );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['routes'].isNotEmpty) {
-          _processRouteData(data);
+      final drivingFuture = http.get(
+        Uri.parse(
+            'https://maps.googleapis.com/maps/api/directions/json?'
+                'origin=${_currentPosition!.latitude},${_currentPosition!.longitude}'
+                '&destination=${_destination!.latitude},${_destination!.longitude}'
+                '&mode=driving'
+                '&key=$_googleApiKey'
+                '&language=fr'
+                '&region=ma'
+        ),
+      );
+
+      final responses = await Future.wait([transitFuture, drivingFuture]);
+
+      if (responses[0].statusCode == 200 && responses[1].statusCode == 200) {
+        final transitData = json.decode(responses[0].body);
+        final drivingData = json.decode(responses[1].body);
+
+        if (transitData['routes'].isNotEmpty && drivingData['routes'].isNotEmpty) {
+          final transitRoute = transitData['routes'][0];
+          final drivingRoute = drivingData['routes'][0];
+          final transitLegs = transitRoute['legs'][0];
+          final drivingLegs = drivingRoute['legs'][0];
+
+          setState(() {
+            _transitSteps = _parseSteps(transitLegs['steps']);
+            _drivingSteps = _parseSteps(drivingLegs['steps']);
+            _transitDistance = transitLegs['distance']['value'].toDouble();
+            _drivingDistance = drivingLegs['distance']['value'].toDouble();
+            _transitDuration = transitLegs['duration']['value'].toDouble();
+            _drivingDuration = drivingLegs['duration']['value'].toDouble();
+            _startAddress = transitLegs['start_address'];
+            _endAddress = transitLegs['end_address'];
+            _departureTime = _formatTime(DateTime.now());
+            _arrivalTime = _formatTime(DateTime.now().add(Duration(seconds: _transitDuration.toInt())));
+
+            // Afficher le trajet sélectionné par défaut
+            _showRouteOnMap(
+              _selectedRouteType == 'transit'
+                  ? _decodePolyline(transitRoute['overview_polyline']['points'])
+                  : _decodePolyline(drivingRoute['overview_polyline']['points']),
+              _selectedRouteType == 'transit' ? Colors.blue : Colors.purple,
+            );
+
+            _showSearchPanel = false;
+          });
+
+          _navigateToDetails();
         }
       }
     } catch (e) {
@@ -208,6 +254,27 @@ class _JourneyPageState extends State<JourneyPage> {
       );
     }
   }
+
+  void _navigateToDetails() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RouteDetailsPage(
+          cheaperSteps: _transitSteps,
+          fasterSteps: _drivingSteps,
+          cheaperDistance: _transitDistance,
+          fasterDistance: _drivingDistance,
+          cheaperDuration: _transitDuration,
+          fasterDuration: _drivingDuration,
+          startAddress: _startAddress,
+          endAddress: _endAddress,
+          departureTime: _departureTime,
+          arrivalTime: _arrivalTime,
+        ),
+      ),
+    );
+  }
+
   Future<void> _getIntercityRoute() async {
     try {
       // 1. Trouver la gare la plus proche de la position actuelle
@@ -227,13 +294,13 @@ class _JourneyPageState extends State<JourneyPage> {
       // 5. Mettre à jour l'état
       if (mounted) {
         setState(() {
-          _routeSteps = [
+          _transitSteps = [
             ...toStationRoute['steps'],
             TransportStep(
               type: 'train',
               instruction: 'Prendre le train de ${nearestStationOrigin['name']} à ${nearestStationDest['name']}',
-              distance: 0, // Nous ne traçons pas cette distance
-              duration: 0, // Durée estimée non disponible
+              distance: 0,
+              duration: 0,
               icon: Icons.train,
               color: Colors.red,
               lineNumber: 'Train',
@@ -244,12 +311,12 @@ class _JourneyPageState extends State<JourneyPage> {
             ...fromStationRoute['steps'],
           ];
 
-          _totalDistance = toStationRoute['distance'] + fromStationRoute['distance'];
-          _totalDuration = toStationRoute['duration'] + fromStationRoute['duration'];
+          _transitDistance = toStationRoute['distance'] + fromStationRoute['distance'];
+          _transitDuration = toStationRoute['duration'] + fromStationRoute['duration'];
           _startAddress = toStationRoute['startAddress'];
           _endAddress = fromStationRoute['endAddress'];
           _departureTime = _formatTime(DateTime.now());
-          _arrivalTime = _formatTime(DateTime.now().add(Duration(seconds: _totalDuration.toInt())));
+          _arrivalTime = _formatTime(DateTime.now().add(Duration(seconds: _transitDuration.toInt())));
 
           // Afficher uniquement les parties que nous pouvons tracer précisément
           _showPartialIntercityRoute(
@@ -261,12 +328,44 @@ class _JourneyPageState extends State<JourneyPage> {
 
           _showSearchPanel = false;
         });
+
+        // Récupérer aussi l'itinéraire en voiture pour comparaison
+        await _getDrivingRoute();
+        _navigateToDetails();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erreur de planification: $e')),
         );
+      }
+    }
+  }
+
+  Future<void> _getDrivingRoute() async {
+    final response = await http.get(
+      Uri.parse(
+          'https://maps.googleapis.com/maps/api/directions/json?'
+              'origin=${_currentPosition!.latitude},${_currentPosition!.longitude}'
+              '&destination=${_destination!.latitude},${_destination!.longitude}'
+              '&mode=driving'
+              '&key=$_googleApiKey'
+              '&language=fr'
+              '&region=ma'
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data['routes'].isNotEmpty) {
+        final route = data['routes'][0];
+        final legs = route['legs'][0];
+
+        setState(() {
+          _drivingSteps = _parseSteps(legs['steps']);
+          _drivingDistance = legs['distance']['value'].toDouble();
+          _drivingDuration = legs['duration']['value'].toDouble();
+        });
       }
     }
   }
@@ -525,163 +624,12 @@ class _JourneyPageState extends State<JourneyPage> {
     throw Exception('Impossible de trouver un itinéraire depuis la gare');
   }
 
-  Future<void> _getRouteBetweenPoints(LatLng origin, LatLng destination, String mode) async {
-    final response = await http.get(
-      Uri.parse(
-          'https://maps.googleapis.com/maps/api/directions/json?'
-              'origin=${origin.latitude},${origin.longitude}'
-              '&destination=${destination.latitude},${destination.longitude}'
-              '&mode=$mode'
-              '&key=$_googleApiKey'
-              '&language=fr'
-              '&region=ma'
-      ),
-    );
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data['routes'].isNotEmpty) {
-        final route = data['routes'][0];
-        final legs = route['legs'][0];
-
-        setState(() {
-          _routeSteps = _parseSteps(legs['steps']);
-          _totalDistance = legs['distance']['value'].toDouble();
-          _totalDuration = legs['duration']['value'].toDouble();
-          _startAddress = legs['start_address'];
-          _endAddress = legs['end_address'];
-          _polylines.add(
-            Polyline(
-              polylineId: const PolylineId('partial-route'),
-              color: Colors.blue,
-              width: 5,
-              points: _decodePolyline(route['overview_polyline']['points']),
-            ),
-          );
-        });
-      }
-    }
-  }
-
-  void _showIntercityRoute(
-      List<LatLng> toStationPolyline,
-      List<LatLng> fromStationPolyline,
-      Map<String, dynamic> originStation,
-      Map<String, dynamic> destStation,
-      ) {
-    setState(() {
-      _polylines.clear();
-      _markers.clear();
-
-      // Ajouter les marqueurs
-      _markers.addAll([
-        Marker(
-          markerId: const MarkerId('current-location'),
-          position: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
-          infoWindow: const InfoWindow(title: 'Votre position'),
-        ),
-        Marker(
-          markerId: const MarkerId('origin-station'),
-          position: originStation['location'],
-          infoWindow: InfoWindow(title: 'Gare de départ: ${originStation['name']}'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        ),
-        Marker(
-          markerId: const MarkerId('dest-station'),
-          position: destStation['location'],
-          infoWindow: InfoWindow(title: 'Gare d\'arrivée: ${destStation['name']}'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        ),
-        Marker(
-          markerId: const MarkerId('destination'),
-          position: _destination!,
-          infoWindow: InfoWindow(title: _destinationController.text),
-        ),
-      ]);
-
-      // Ajouter les polylignes
-      _polylines.add(Polyline(
-        polylineId: const PolylineId('to-station'),
-        points: toStationPolyline,
-        color: Colors.blue,
-        width: 5,
-      ));
-
-      _polylines.add(Polyline(
-        polylineId: const PolylineId('from-station'),
-        points: fromStationPolyline,
-        color: Colors.blue,
-        width: 5,
-      ));
-
-      // Ajouter une ligne droite entre les gares (représentant le train)
-      _polylines.add(Polyline(
-        polylineId: const PolylineId('train-route'),
-        points: [originStation['location'], destStation['location']],
-        color: Colors.red,
-        width: 3,
-        geodesic: true,
-      ));
-    });
-
-    // Ajuster la caméra pour afficher tout le trajet
-    _mapController.animateCamera(
-      CameraUpdate.newLatLngBounds(
-        _boundsFromLatLngList([
-          LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
-          _destination!,
-        ]),
-        100,
-      ),
-    );
-  }
-
-  LatLngBounds _boundsFromLatLngList(List<LatLng> list) {
-    double? x0, x1, y0, y1;
-    for (LatLng latLng in list) {
-      if (x0 == null) {
-        x0 = x1 = latLng.latitude;
-        y0 = y1 = latLng.longitude;
-      } else {
-        if (latLng.latitude > x1!) x1 = latLng.latitude;
-        if (latLng.latitude < x0) x0 = latLng.latitude;
-        if (latLng.longitude > y1!) y1 = latLng.longitude;
-        if (latLng.longitude < y0!) y0 = latLng.longitude;
-      }
-    }
-    return LatLngBounds(
-      northeast: LatLng(x1!, y1!),
-      southwest: LatLng(x0!, y0!),
-    );
-  }
-  void _processRouteData(Map<String, dynamic> data) {
-    final route = data['routes'][0];
-    final legs = route['legs'][0];
-    final points = route['overview_polyline']['points'];
-    final routePoints = _decodePolyline(points);
-
-    setState(() {
-      _routeSteps = _parseSteps(legs['steps']);
-      _totalDistance = legs['distance']['value'].toDouble();
-      _totalDuration = legs['duration']['value'].toDouble();
-      _startAddress = legs['start_address'];
-      _endAddress = legs['end_address'];
-      _departureTime = _formatTime(DateTime.now());
-      _arrivalTime = _formatTime(
-          DateTime.now().add(Duration(seconds: legs['duration']['value'].toInt()))
-      );
-      _showRouteOnMap(routePoints);
-      _showSearchPanel = false;
-    });
-  }
-
   List<TransportStep> _parseSteps(List<dynamic> steps) {
     return steps.map((step) {
       if (step['travel_mode'] == 'WALKING') {
         return TransportStep(
           type: 'walk',
-          instruction: 'Marcher jusqu\'à ${step['end_address'] ??
-              'la station'}',
+          instruction: 'Marcher jusqu\'à ${step['end_address'] ?? 'la station'}',
           distance: step['distance']['value'].toDouble(),
           duration: step['duration']['value'].toDouble(),
           icon: Icons.directions_walk,
@@ -731,15 +679,11 @@ class _JourneyPageState extends State<JourneyPage> {
 
   List<LatLng> _decodePolyline(String encoded) {
     List<LatLng> points = [];
-    int index = 0,
-        len = encoded.length;
-    int lat = 0,
-        lng = 0;
+    int index = 0, len = encoded.length;
+    int lat = 0, lng = 0;
 
     while (index < len) {
-      int b,
-          shift = 0,
-          result = 0;
+      int b, shift = 0, result = 0;
       do {
         b = encoded.codeUnitAt(index++) - 63;
         result |= (b & 0x1f) << shift;
@@ -764,10 +708,10 @@ class _JourneyPageState extends State<JourneyPage> {
   }
 
   String _formatTime(DateTime time) {
-    return DateFormat.Hm().format(time); // Format 24h (14:30)
+    return DateFormat.Hm().format(time);
   }
 
-  void _showRouteOnMap(List<LatLng> routePoints) {
+  void _showRouteOnMap(List<LatLng> routePoints, Color color) {
     setState(() {
       _polylines.clear();
       _markers.add(
@@ -780,7 +724,7 @@ class _JourneyPageState extends State<JourneyPage> {
       _polylines.add(
         Polyline(
           polylineId: const PolylineId('route'),
-          color: _selectedRouteType == 'transit' ? Colors.blue : Colors.purple,
+          color: color,
           width: 5,
           points: routePoints,
         ),
@@ -796,20 +740,37 @@ class _JourneyPageState extends State<JourneyPage> {
     });
   }
 
+  LatLngBounds _boundsFromLatLngList(List<LatLng> list) {
+    double? x0, x1, y0, y1;
+    for (LatLng latLng in list) {
+      if (x0 == null) {
+        x0 = x1 = latLng.latitude;
+        y0 = y1 = latLng.longitude;
+      } else {
+        if (latLng.latitude > x1!) x1 = latLng.latitude;
+        if (latLng.latitude < x0) x0 = latLng.latitude;
+        if (latLng.longitude > y1!) y1 = latLng.longitude;
+        if (latLng.longitude < y0!) y0 = latLng.longitude;
+      }
+    }
+    return LatLngBounds(
+      northeast: LatLng(x1!, y1!),
+      southwest: LatLng(x0!, y0!),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          // Carte Google Maps ou indicateur de chargement
           _currentPosition == null
               ? const Center(child: CircularProgressIndicator())
               : GoogleMap(
             onMapCreated: (controller) => _mapController = controller,
             initialCameraPosition: CameraPosition(
               target: _currentPosition != null
-                  ? LatLng(
-                  _currentPosition!.latitude, _currentPosition!.longitude)
+                  ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
                   : const LatLng(33.5731, -7.5898),
               zoom: 14,
             ),
@@ -818,15 +779,11 @@ class _JourneyPageState extends State<JourneyPage> {
             myLocationEnabled: true,
           ),
 
-          // Panneau de recherche
           if (_showSearchPanel)
             Align(
               alignment: Alignment.center,
               child: Container(
-                width: MediaQuery
-                    .of(context)
-                    .size
-                    .width * 0.9,
+                width: MediaQuery.of(context).size.width * 0.9,
                 margin: const EdgeInsets.all(20),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -863,10 +820,9 @@ class _JourneyPageState extends State<JourneyPage> {
                         ),
                       ),
                       suggestionsCallback: (pattern) => getSuggestions(pattern),
-                      itemBuilder: (context, suggestion) =>
-                          ListTile(
-                            title: Text(suggestion),
-                          ),
+                      itemBuilder: (context, suggestion) => ListTile(
+                        title: Text(suggestion),
+                      ),
                       onSuggestionSelected: (suggestion) async {
                         _destinationController.text = suggestion;
                         _destination = await getPlaceLatLng(suggestion);
@@ -879,16 +835,11 @@ class _JourneyPageState extends State<JourneyPage> {
                           child: ElevatedButton(
                             onPressed: () {
                               setState(() {
-                                _selectedRouteType =
-                                _selectedRouteType == 'transit'
-                                    ? 'driving'
-                                    : 'transit';
+                                _selectedRouteType = _selectedRouteType == 'transit' ? 'driving' : 'transit';
                               });
                             },
                             child: Text(
-                              _selectedRouteType == 'transit'
-                                  ? 'Cheaper'
-                                  : 'Faster',
+                              _selectedRouteType == 'transit' ? 'Cheaper' : 'Faster',
                             ),
                           ),
                         ),
@@ -908,13 +859,9 @@ class _JourneyPageState extends State<JourneyPage> {
               ),
             ),
 
-          // Boutons de navigation (quand le panneau de recherche n'est pas visible)
           if (!_showSearchPanel) ...[
             Positioned(
-              top: MediaQuery
-                  .of(context)
-                  .padding
-                  .top + 20,
+              top: MediaQuery.of(context).padding.top + 20,
               left: 20,
               child: FloatingActionButton(
                 mini: true,
@@ -927,23 +874,7 @@ class _JourneyPageState extends State<JourneyPage> {
               bottom: 20,
               right: 20,
               child: FloatingActionButton.extended(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          RouteDetailsPage(
-                            steps: _routeSteps,
-                            totalDistance: _totalDistance,
-                            totalDuration: _totalDuration,
-                            startAddress: _startAddress,
-                            endAddress: _endAddress,
-                            departureTime: _departureTime,
-                            arrivalTime: _arrivalTime,
-                          ),
-                    ),
-                  );
-                },
+                onPressed: _navigateToDetails,
                 icon: const Icon(Icons.list),
                 label: const Text('Details'),
                 backgroundColor: Colors.blue,

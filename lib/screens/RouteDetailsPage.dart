@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'transport_step.dart';
 
-class RouteDetailsPage extends StatelessWidget {
-  final List<TransportStep> steps;
-  final double totalDistance;
-  final double totalDuration;
+class RouteDetailsPage extends StatefulWidget {
+  final List<TransportStep> cheaperSteps;
+  final List<TransportStep> fasterSteps;
+  final double cheaperDistance;
+  final double fasterDistance;
+  final double cheaperDuration;
+  final double fasterDuration;
   final String startAddress;
   final String endAddress;
   final String departureTime;
@@ -13,70 +16,133 @@ class RouteDetailsPage extends StatelessWidget {
 
   const RouteDetailsPage({
     Key? key,
-    required this.steps,
-    required this.totalDistance,
-    required this.totalDuration,
+    required this.cheaperSteps,
+    required this.fasterSteps,
+    required this.cheaperDistance,
+    required this.fasterDistance,
+    required this.cheaperDuration,
+    required this.fasterDuration,
     required this.startAddress,
     required this.endAddress,
     required this.departureTime,
     required this.arrivalTime,
   }) : super(key: key);
 
-  bool get isIntercityTrip => steps.any((step) => step.type == 'train');
+  @override
+  _RouteDetailsPageState createState() => _RouteDetailsPageState();
+}
+
+class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  bool _showCheaper = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_handleTabSelection);
+  }
+
+  void _handleTabSelection() {
+    setState(() {
+      _showCheaper = _tabController.index == 0;
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  bool get isIntercityTrip => _showCheaper
+      ? widget.cheaperSteps.any((step) => step.type == 'train')
+      : false;
 
   @override
   Widget build(BuildContext context) {
-    final isCarTrip = steps.isNotEmpty && steps.first.type == 'drive';
-    final durationInMinutes = (totalDuration / 60).round();
-    final distanceInKm = (totalDistance / 1000).toStringAsFixed(1);
+    final currentSteps = _showCheaper ? widget.cheaperSteps : widget.fasterSteps;
+    final currentDistance = _showCheaper ? widget.cheaperDistance : widget.fasterDistance;
+    final currentDuration = _showCheaper ? widget.cheaperDuration : widget.fasterDuration;
+    final isCarTrip = !_showCheaper;
+
+    final durationInMinutes = (currentDuration / 60).round();
+    final distanceInKm = (currentDistance / 1000).toStringAsFixed(1);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Détails du trajet'),
-        backgroundColor: isCarTrip ? Colors.purple :
-                         isIntercityTrip ? Colors.red : Colors.blue,
-      ),
-      body: Column(
-        children: [
-          // En-tête avec durée et distance
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isCarTrip ? Colors.purple[50] :
-                     isIntercityTrip ? Colors.red[50] : Colors.blue[50],
-              border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildInfoItem(
-                  Icons.timer,
-                  '$durationInMinutes min',
-                  isCarTrip ? Colors.purple :
-                  isIntercityTrip ? Colors.red : Colors.blue,
-                ),
-                _buildInfoItem(
-                  isCarTrip ? Icons.directions_car :
-                  isIntercityTrip ? Icons.train : Icons.linear_scale,
-                  '$distanceInKm km',
-                  isCarTrip ? Colors.purple :isIntercityTrip ? Colors.red : Colors.blue,
-                ),
-                if (!isCarTrip)
-                  _buildInfoItem(
-                    isIntercityTrip ? Icons.train : Icons.directions_bus,
-                    isIntercityTrip ? 'Train inter-villes' : '${_countTransports()} transport(s)',
-                    isIntercityTrip ? Colors.red : Colors.blue,
-                  ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: Container(
+            color: Theme.of(context).primaryColor,
+            child: TabBar(
+              controller: _tabController,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white.withOpacity(0.7),
+              indicatorColor: Colors.white,
+              tabs: const [
+                Tab(text: 'Cheaper (Transport)'),
+                Tab(text: 'Faster (Voiture)'),
               ],
             ),
           ),
-
-          // Corps principal
-          Expanded(
-            child: isCarTrip ? _buildCarView() : _buildPublicTransportView(),
-          ),
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildContent(widget.cheaperSteps, widget.cheaperDistance, widget.cheaperDuration, false),
+          _buildContent(widget.fasterSteps, widget.fasterDistance, widget.fasterDuration, true),
         ],
       ),
+    );
+  }
+
+  Widget _buildContent(List<TransportStep> steps, double distance, double duration, bool isCarTrip) {
+    final durationInMinutes = (duration / 60).round();
+    final distanceInKm = (distance / 1000).toStringAsFixed(1);
+    final isTrainTrip = steps.any((step) => step.type == 'train');
+
+    return Column(
+      children: [
+        // En-tête avec durée et distance
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isCarTrip ? Colors.purple[50] :
+            isTrainTrip ? Colors.red[50] : Colors.blue[50],
+            border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildInfoItem(
+                Icons.timer,
+                '$durationInMinutes min',
+                isCarTrip ? Colors.purple :
+                isTrainTrip ? Colors.red : Colors.blue,
+              ),
+              _buildInfoItem(
+                isCarTrip ? Icons.directions_car :
+                isTrainTrip ? Icons.train : Icons.linear_scale,
+                '$distanceInKm km',
+                isCarTrip ? Colors.purple :
+                isTrainTrip ? Colors.red : Colors.blue,
+              ),
+              if (!isCarTrip)
+                _buildInfoItem(
+                  isTrainTrip ? Icons.train : Icons.directions_bus,
+                  isTrainTrip ? 'Train inter-villes' : '${_countTransports(steps)} transport(s)',
+                  isTrainTrip ? Colors.red : Colors.blue,
+                ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: isCarTrip ? _buildCarView() : _buildPublicTransportView(steps),
+        ),
+      ],
     );
   }
 
@@ -88,8 +154,8 @@ class RouteDetailsPage extends StatelessWidget {
           _buildLocationCard(
             Icons.location_on,
             'Départ',
-            startAddress,
-            departureTime,
+            widget.startAddress,
+            widget.departureTime,
             Colors.purple,
           ),
           const SizedBox(height: 24),
@@ -98,8 +164,8 @@ class RouteDetailsPage extends StatelessWidget {
           _buildLocationCard(
             Icons.flag,
             'Arrivée',
-            endAddress,
-            arrivalTime,
+            widget.endAddress,
+            widget.arrivalTime,
             Colors.purple,
           ),
         ],
@@ -107,7 +173,7 @@ class RouteDetailsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildPublicTransportView() {
+  Widget _buildPublicTransportView(List<TransportStep> steps) {
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: steps.length,
@@ -211,7 +277,8 @@ class RouteDetailsPage extends StatelessWidget {
             if (isTrain) _buildTrainDetails(step),
             const SizedBox(height: 8),
             LinearProgressIndicator(
-              value: step.distance > 0 ? step.distance / totalDistance : 0.1,
+              value: step.distance > 0 ? step.distance /
+                  (_showCheaper ? widget.cheaperDistance : widget.fasterDistance) : 0.1,
               backgroundColor: Colors.grey[200],
               valueColor: AlwaysStoppedAnimation<Color>(
                   isTrain ? Colors.red : step.color),
@@ -228,6 +295,7 @@ class RouteDetailsPage extends StatelessWidget {
       ),
     );
   }
+
   Widget _buildTrainDetails(TransportStep step) {
     return Padding(
       padding: const EdgeInsets.only(left: 42, top: 8),
@@ -311,7 +379,7 @@ class RouteDetailsPage extends StatelessWidget {
     );
   }
 
-  int _countTransports() {
+  int _countTransports(List<TransportStep> steps) {
     return steps.where((step) => step.type == 'transport').length;
   }
 
