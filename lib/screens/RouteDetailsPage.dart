@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:transport_app/screens/reservation_page.dart';
 import 'transport_step.dart';
 
 class RouteDetailsPage extends StatefulWidget {
@@ -61,14 +62,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
-    final currentSteps = _showCheaper ? widget.cheaperSteps : widget.fasterSteps;
-    final currentDistance = _showCheaper ? widget.cheaperDistance : widget.fasterDistance;
-    final currentDuration = _showCheaper ? widget.cheaperDuration : widget.fasterDuration;
-    final isCarTrip = !_showCheaper;
-
-    final durationInMinutes = (currentDuration / 60).round();
-    final distanceInKm = (currentDistance / 1000).toStringAsFixed(1);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Détails du trajet'),
@@ -97,6 +90,107 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerPr
         ],
       ),
     );
+  }
+
+  Widget _buildTransportStep(TransportStep step) {
+    final isTransport = step.type == 'transport';
+    final isWalking = step.type == 'walk';
+    final isTrain = step.type == 'train';
+
+    return InkWell(
+      onTap: isTransport ? () => _showReservationDialog(context, step) : null,
+      child: Card(
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: step.color.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isTrain ? Icons.train : step.icon,
+                      color: isTrain ? Colors.red : step.color,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      isTrain ? 'Train inter-villes' : _getStepTitle(step),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${(step.duration / 60).round()} min',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              if (isTransport) _buildTransportDetails(step),
+              if (isWalking) _buildWalkingDetails(step),
+              if (isTrain) _buildTrainDetails(step),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                value: step.distance > 0 ? step.distance /
+                    (_showCheaper ? widget.cheaperDistance : widget.fasterDistance) : 0.1,
+                backgroundColor: Colors.grey[200],
+                valueColor: AlwaysStoppedAnimation<Color>(
+                    isTrain ? Colors.red : step.color),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                step.distance > 0
+                    ? '${(step.distance / 1000).toStringAsFixed(1)} km'
+                    : 'Distance non spécifiée',
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              ),
+              if (isTransport)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => _showReservationDialog(context, step),
+                    child: const Text('Réserver',
+                        style: TextStyle(color: Colors.blue)),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showReservationDialog(BuildContext context, TransportStep step) {
+    final now = DateTime.now();
+    final departureTime = now.add(Duration(minutes: 5)); // Exemple: départ dans 5 minutes
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ReservationPage(
+          stopName: step.departureStop ?? 'Arrêt inconnu',
+          lineNumber: step.lineNumber ?? 'Ligne inconnue',
+          departureTime: departureTime,
+          price: _calculatePrice(step),
+        ),
+      ),
+    );
+  }
+
+  double _calculatePrice(TransportStep step) {
+    // Logique de calcul du prix basée sur la distance ou le type de transport
+    if (step.type == 'train') return 15.0;
+    if (step.lineNumber?.contains('Tram') ?? false) return 6.0;
+    return 8.0; // Prix par défaut pour les bus
   }
 
   Widget _buildContent(List<TransportStep> steps, double distance, double duration, bool isCarTrip) {
@@ -231,70 +325,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerPr
     );
   }
 
-  Widget _buildTransportStep(TransportStep step) {
-    final isTransport = step.type == 'transport';
-    final isWalking = step.type == 'walk';
-    final isTrain = step.type == 'train';
-
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: step.color.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    isTrain ? Icons.train : step.icon,
-                    color: isTrain ? Colors.red : step.color,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    isTrain ? 'Train inter-villes' : _getStepTitle(step),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-                Text(
-                  '${(step.duration / 60).round()} min',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            if (isTransport) _buildTransportDetails(step),
-            if (isWalking) _buildWalkingDetails(step),
-            if (isTrain) _buildTrainDetails(step),
-            const SizedBox(height: 8),
-            LinearProgressIndicator(
-              value: step.distance > 0 ? step.distance /
-                  (_showCheaper ? widget.cheaperDistance : widget.fasterDistance) : 0.1,
-              backgroundColor: Colors.grey[200],
-              valueColor: AlwaysStoppedAnimation<Color>(
-                  isTrain ? Colors.red : step.color),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              step.distance > 0
-                  ? '${(step.distance / 1000).toStringAsFixed(1)} km'
-                  : 'Distance non spécifiée',
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildTrainDetails(TransportStep step) {
     return Padding(

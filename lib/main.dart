@@ -28,6 +28,22 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false, // ← Ceci désactive la bannière
       title: 'Transport App',
+      theme: ThemeData(
+        // Vos autres paramètres de thème existants
+        primarySwatch: Colors.blue,
+
+        // Ajoutez cette partie pour personnaliser les TabBar
+        tabBarTheme: const TabBarTheme(
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicator: UnderlineTabIndicator(
+            borderSide: BorderSide(
+              color: Colors.white,
+              width: 2.0,
+            ),
+          ),
+        ),
+      ),
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
