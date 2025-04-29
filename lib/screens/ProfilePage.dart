@@ -35,7 +35,7 @@ class ProfilePage extends StatelessWidget {
                   const SizedBox(height: 10),
                   _buildListItem(Icons.person_outline, "Manage my account"),
                   _buildListItem(Icons.lock_outline, "Privacy and safety"),
-                  _buildListItem(Icons.edit_note, "Registration"),
+                  _buildListItem(Icons.person_pin_circle_rounded, "Personal criteria"),
                   _buildListItem(Icons.account_balance_wallet_outlined, "Balance"),
                   _buildListItem(Icons.link, "Links"),
                   _buildListItem(Icons.qr_code, "Codes"),

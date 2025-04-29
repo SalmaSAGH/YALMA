@@ -178,7 +178,7 @@ class _HomePageState extends State<HomePage> {
               textFieldConfiguration: TextFieldConfiguration(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'Rechercher un endroit',
+                  hintText: 'Search a place',
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
                   fillColor: Colors.white,

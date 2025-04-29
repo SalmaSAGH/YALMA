@@ -801,7 +801,7 @@ class _JourneyPageState extends State<JourneyPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text(
-                      'Planifier votre trajet',
+                      'Plan your journey !',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -850,7 +850,7 @@ class _JourneyPageState extends State<JourneyPage> {
                             backgroundColor: Colors.blue,
                             foregroundColor: Colors.white,
                           ),
-                          child: const Text('Rechercher'),
+                          child: const Text('Search'),
                         ),
                       ],
                     ),
