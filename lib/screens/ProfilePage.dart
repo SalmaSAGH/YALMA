@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'personal_criteria_page.dart'; // Nouvel import
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -35,7 +36,16 @@ class ProfilePage extends StatelessWidget {
                   const SizedBox(height: 10),
                   _buildListItem(Icons.person_outline, "Manage my account"),
                   _buildListItem(Icons.lock_outline, "Privacy and safety"),
-                  _buildListItem(Icons.person_pin_circle_rounded, "Personal criteria"),
+                  _buildListItem(
+                    Icons.directions_walk,
+                    "Personal criteria",
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PersonalCriteriaPage(),
+                      ),
+                    ),
+                  ),
                   _buildListItem(Icons.account_balance_wallet_outlined, "Balance"),
                   _buildListItem(Icons.link, "Links"),
                   _buildListItem(Icons.qr_code, "Codes"),
@@ -53,12 +63,12 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildListItem(IconData icon, String title) {
+  Widget _buildListItem(IconData icon, String title, {VoidCallback? onTap}) {
     return ListTile(
       leading: Icon(icon),
       title: Text(title),
       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: () {}, // tu peux ajouter une action ici
+      onTap: onTap ?? () {}, // Utilise le callback fourni ou une fonction vide
     );
   }
 }

@@ -14,6 +14,8 @@ class RouteDetailsPage extends StatefulWidget {
   final String endAddress;
   final String departureTime;
   final String arrivalTime;
+  final int initialTab;
+
 
   const RouteDetailsPage({
     Key? key,
@@ -27,6 +29,7 @@ class RouteDetailsPage extends StatefulWidget {
     required this.endAddress,
     required this.departureTime,
     required this.arrivalTime,
+    this.initialTab = 0, // Valeur par défaut à 0 (Cheaper)
   }) : super(key: key);
 
   @override
@@ -40,9 +43,15 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerPr
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTab, // Utilise le paramètre initialTab
+    );
     _tabController.addListener(_handleTabSelection);
+    _showCheaper = widget.initialTab == 0;
   }
+
 
   void _handleTabSelection() {
     setState(() {
@@ -96,6 +105,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerPr
     final isTransport = step.type == 'transport';
     final isWalking = step.type == 'walk';
     final isTrain = step.type == 'train';
+    final isTaxi = step.type == 'taxi';
 
     return InkWell(
       onTap: isTransport ? () => _showReservationDialog(context, step) : null,

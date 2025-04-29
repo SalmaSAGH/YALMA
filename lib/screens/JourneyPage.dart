@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:transport_app/screens/transport_step.dart';
 import 'RouteDetailsPage.dart';
 
@@ -49,6 +50,37 @@ class _JourneyPageState extends State<JourneyPage> {
   void initState() {
     super.initState();
     _getCurrentLocation();
+  }
+
+  Future<double> _getUserMaxWalkingDistance() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble('max_walking_distance') ?? 500.0;
+  }
+
+  Future<List<TransportStep>> _applyWalkingPreferences(List<TransportStep> steps) async {
+    final maxDistance = await _getUserMaxWalkingDistance();
+    final adjustedSteps = <TransportStep>[];
+
+    for (final step in steps) {
+      if (step.type == 'walk' && step.distance > maxDistance) {
+        // Remplacer par une option taxi
+        adjustedSteps.add(
+          TransportStep(
+            type: 'taxi',
+            instruction: 'Prendre un taxi (${step.distance.toInt()}m de marche)',
+            distance: step.distance,
+            duration: step.duration * 0.4, // Taxi plus rapide
+            icon: Icons.local_taxi,
+            color: Colors.yellow[700]!,
+            departureTime: 'Disponible immédiatement',
+          ),
+        );
+      } else {
+        adjustedSteps.add(step);
+      }
+    }
+
+    return adjustedSteps;
   }
 
   Future<void> _getCurrentLocation() async {
@@ -221,9 +253,11 @@ class _JourneyPageState extends State<JourneyPage> {
           final drivingRoute = drivingData['routes'][0];
           final transitLegs = transitRoute['legs'][0];
           final drivingLegs = drivingRoute['legs'][0];
+          final adjustedSteps = await _applyWalkingPreferences(_parseSteps(transitLegs['steps']));
 
           setState(() {
-            _transitSteps = _parseSteps(transitLegs['steps']);
+            _transitSteps = adjustedSteps;
+            //_transitSteps = _parseSteps(transitLegs['steps']);
             _drivingSteps = _parseSteps(drivingLegs['steps']);
             _transitDistance = transitLegs['distance']['value'].toDouble();
             _drivingDistance = drivingLegs['distance']['value'].toDouble();
@@ -270,6 +304,7 @@ class _JourneyPageState extends State<JourneyPage> {
           endAddress: _endAddress,
           departureTime: _departureTime,
           arrivalTime: _arrivalTime,
+          initialTab: _selectedRouteType == 'transit' ? 0 : 1, // Nouveau paramètre
         ),
       ),
     );
