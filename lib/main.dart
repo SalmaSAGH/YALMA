@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:transport_app/screens/HomePage.dart';
 import 'package:transport_app/screens/admin_screen.dart';
 import 'package:transport_app/screens/login_screen.dart';
 import 'package:transport_app/screens/signup_screen.dart';
 import 'package:transport_app/screens/welcome_screen.dart';
 import 'package:transport_app/services/local_storage_service.dart';
+import 'package:transport_app/providers/ticket_provider.dart'; // <-- AJOUT
 import 'screens/splash_screen.dart';
 
 void main() async {
@@ -13,10 +15,13 @@ void main() async {
   await LocalStorageService.createAdminUser();
   debugPrintRebuildDirtyWidgets = false;
 
-  runApp(const MyApp());
-  MaterialApp(
-    debugShowCheckedModeBanner: false, // ← Ceci désactive la bannière
-    home: LoginScreen(),
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => TicketProvider()),
+      ],
+      child: const MyApp(),
+    ),
   );
 }
 
@@ -26,13 +31,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false, // ← Ceci désactive la bannière
+      debugShowCheckedModeBanner: false,
       title: 'Transport App',
       theme: ThemeData(
-        // Vos autres paramètres de thème existants
         primarySwatch: Colors.blue,
-
-        // Ajoutez cette partie pour personnaliser les TabBar
         tabBarTheme: const TabBarTheme(
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
@@ -50,11 +52,10 @@ class MyApp extends StatelessWidget {
         '/welcome': (context) => const WelcomeScreen(),
         '/login': (context) => const LoginScreen(),
         '/signup': (context) => const SignUpScreen(),
-        '/home': (context) => const HomePage(), // Ajoutez cette ligne
+        '/home': (context) => const HomePage(),
         '/admin': (context) => const AdminScreen(),
       },
       onGenerateRoute: (settings) {
-        // Gestion des routes dynamiques si nécessaire
         return null;
       },
       onUnknownRoute: (settings) {

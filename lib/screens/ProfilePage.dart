@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'MyTicketsPage.dart';
 import 'personal_criteria_page.dart'; // Nouvel import
 
 class ProfilePage extends StatelessWidget {
@@ -52,7 +53,15 @@ class ProfilePage extends StatelessWidget {
                   const SizedBox(height: 30),
                   const Text("Advises", style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
-                  _buildListItem(Icons.airplane_ticket_outlined, "My Tickets"),
+                  _buildListItem(
+                    Icons.airplane_ticket_outlined,
+                    "My Tickets",
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MyTicketsPage()),
+                    ),
+                  ),
+
                   _buildListItem(Icons.support_agent, "Support"),
                 ],
               ),

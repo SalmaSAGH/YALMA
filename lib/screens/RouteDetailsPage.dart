@@ -16,7 +16,6 @@ class RouteDetailsPage extends StatefulWidget {
   final String arrivalTime;
   final int initialTab;
 
-
   const RouteDetailsPage({
     Key? key,
     required this.cheaperSteps,
@@ -29,7 +28,7 @@ class RouteDetailsPage extends StatefulWidget {
     required this.endAddress,
     required this.departureTime,
     required this.arrivalTime,
-    this.initialTab = 0, // Valeur par défaut à 0 (Cheaper)
+    this.initialTab = 0,
   }) : super(key: key);
 
   @override
@@ -46,12 +45,11 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerPr
     _tabController = TabController(
       length: 2,
       vsync: this,
-      initialIndex: widget.initialTab, // Utilise le paramètre initialTab
+      initialIndex: widget.initialTab,
     );
     _tabController.addListener(_handleTabSelection);
     _showCheaper = widget.initialTab == 0;
   }
-
 
   void _handleTabSelection() {
     setState(() {
@@ -64,10 +62,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerPr
     _tabController.dispose();
     super.dispose();
   }
-
-  bool get isIntercityTrip => _showCheaper
-      ? widget.cheaperSteps.any((step) => step.type == 'train')
-      : false;
 
   @override
   Widget build(BuildContext context) {
@@ -105,102 +99,84 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerPr
     final isTransport = step.type == 'transport';
     final isWalking = step.type == 'walk';
     final isTrain = step.type == 'train';
-    final isTaxi = step.type == 'taxi';
 
-    return InkWell(
-      onTap: isTransport ? () => _showReservationDialog(context, step) : null,
-      child: Card(
-        elevation: 2,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: step.color.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      isTrain ? Icons.train : step.icon,
-                      color: isTrain ? Colors.red : step.color,
-                    ),
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 2,
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: step.color.withOpacity(0.2),
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      isTrain ? 'Train inter-villes' : _getStepTitle(step),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '${(step.duration / 60).round()} min',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              if (isTransport) _buildTransportDetails(step),
-              if (isWalking) _buildWalkingDetails(step),
-              if (isTrain) _buildTrainDetails(step),
-              const SizedBox(height: 8),
-              LinearProgressIndicator(
-                value: step.distance > 0 ? step.distance /
-                    (_showCheaper ? widget.cheaperDistance : widget.fasterDistance) : 0.1,
-                backgroundColor: Colors.grey[200],
-                valueColor: AlwaysStoppedAnimation<Color>(
-                    isTrain ? Colors.red : step.color),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                step.distance > 0
-                    ? '${(step.distance / 1000).toStringAsFixed(1)} km'
-                    : 'Distance non spécifiée',
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
-              ),
-              if (isTransport)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => _showReservationDialog(context, step),
-                    child: const Text('Réserver',
-                        style: TextStyle(color: Colors.blue)),
+                  child: Icon(
+                    isTrain ? Icons.train : step.icon,
+                    color: isTrain ? Colors.red : step.color,
+                    size: 24,
                   ),
                 ),
-            ],
-          ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    isTrain ? 'Train inter-villes' : _getStepTitle(step),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${(step.duration / 60).round()} min',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (isTransport) _buildTransportDetails(step),
+            if (isWalking) _buildWalkingDetails(step),
+            if (isTrain) _buildTrainDetails(step),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: step.distance > 0
+                  ? step.distance / (_showCheaper ? widget.cheaperDistance : widget.fasterDistance)
+                  : 0.1,
+              backgroundColor: Colors.grey[200],
+              valueColor: AlwaysStoppedAnimation<Color>(
+                  isTrain ? Colors.red : step.color),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              step.distance > 0
+                  ? '${(step.distance / 1000).toStringAsFixed(1)} km'
+                  : 'Distance non spécifiée',
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+            if (isTransport)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => _showTransportReservation(context, step),
+                  child: const Text(
+                    'Réserver',
+                    style: TextStyle(color: Colors.blue),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
-  }
-
-  void _showReservationDialog(BuildContext context, TransportStep step) {
-    final now = DateTime.now();
-    final departureTime = now.add(Duration(minutes: 5)); // Exemple: départ dans 5 minutes
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ReservationPage(
-          stopName: step.departureStop ?? 'Arrêt inconnu',
-          lineNumber: step.lineNumber ?? 'Ligne inconnue',
-          departureTime: departureTime,
-          price: _calculatePrice(step),
-        ),
-      ),
-    );
-  }
-
-  double _calculatePrice(TransportStep step) {
-    // Logique de calcul du prix basée sur la distance ou le type de transport
-    if (step.type == 'train') return 15.0;
-    if (step.lineNumber?.contains('Tram') ?? false) return 6.0;
-    return 8.0; // Prix par défaut pour les bus
   }
 
   Widget _buildContent(List<TransportStep> steps, double distance, double duration, bool isCarTrip) {
@@ -210,7 +186,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerPr
 
     return Column(
       children: [
-        // En-tête avec durée et distance
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -251,29 +226,56 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerPr
   }
 
   Widget _buildCarView() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _buildLocationCard(
-            Icons.location_on,
-            'Départ',
-            widget.startAddress,
-            widget.departureTime,
-            Colors.purple,
+    return Column(
+      children: [
+        Expanded(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildLocationCard(
+                  Icons.location_on,
+                  'Départ',
+                  widget.startAddress,
+                  widget.departureTime,
+                  Colors.purple,
+                ),
+                const SizedBox(height: 24),
+                const Icon(Icons.arrow_downward, size: 36, color: Colors.purple),
+                const SizedBox(height: 24),
+                _buildLocationCard(
+                  Icons.flag,
+                  'Arrivée',
+                  widget.endAddress,
+                  widget.arrivalTime,
+                  Colors.purple,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 24),
-          const Icon(Icons.arrow_downward, size: 36, color: Colors.purple),
-          const SizedBox(height: 24),
-          _buildLocationCard(
-            Icons.flag,
-            'Arrivée',
-            widget.endAddress,
-            widget.arrivalTime,
-            Colors.purple,
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple,
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () => _showTaxiReservation(context),
+            child: const Text(
+              'Réserver un taxi',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -335,7 +337,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerPr
     );
   }
 
-
   Widget _buildTrainDetails(TransportStep step) {
     return Padding(
       padding: const EdgeInsets.only(left: 42, top: 8),
@@ -348,8 +349,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerPr
               '1. Rendez-vous à la gare ${step.departureStop}\n'
                   '2. Prendre un train ONCF en direction de ${step.arrivalStop?.replaceAll('Gare ', '')}\n'
                   '3. Consultez les horaires sur https://www.oncf.ma'),
-          _buildDetailRow(Icons.warning, 'Attention:',
-              'Ne pas confondre avec le tramway ou bus'),
         ],
       ),
     );
@@ -417,6 +416,54 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerPr
         Text(text, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
       ],
     );
+  }
+
+  void _showTransportReservation(BuildContext context, TransportStep step) {
+    final now = DateTime.now();
+    final departureTime = now.add(const Duration(minutes: 5));
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ReservationPage(
+          stopName: step.departureStop ?? widget.startAddress,
+          lineNumber: step.lineNumber ?? 'Transport',
+          departureTime: departureTime,
+          price: _calculateTransportPrice(step),
+          isTaxi: false,
+        ),
+      ),
+    );
+  }
+
+  void _showTaxiReservation(BuildContext context) {
+    final now = DateTime.now();
+    final departureTime = now.add(const Duration(minutes: 5));
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ReservationPage(
+          stopName: widget.startAddress,
+          lineNumber: 'Taxi',
+          departureTime: departureTime,
+          price: _calculateTaxiPrice(),
+          isTaxi: true,
+        ),
+      ),
+    );
+  }
+
+  double _calculateTransportPrice(TransportStep step) {
+    if (step.type == 'train') return 15.0;
+    if (step.lineNumber?.contains('Tram') ?? false) return 6.0;
+    return 8.0;
+  }
+
+  double _calculateTaxiPrice() {
+    final pricePerKm = 3.0;
+    final distanceInKm = widget.fasterDistance / 1000;
+    return (distanceInKm * pricePerKm).roundToDouble();
   }
 
   int _countTransports(List<TransportStep> steps) {
