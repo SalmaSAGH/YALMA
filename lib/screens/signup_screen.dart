@@ -256,7 +256,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     decoration: InputDecoration(
-                      labelText: 'Password (min. 6 caractères)',
+                      labelText: 'Password (min. 12 caractères)',
+                      helperText: 'majuscule, minuscule, chiffre, spécial',
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -276,8 +277,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Veuillez entrer un mot de passe';
                       }
-                      if (value.length < 6) {
-                        return 'Minimum 6 caractères';
+                      if (value.length < 12) {
+                        return 'Minimum 12 caractères';
+                      }
+                      if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                        return 'Doit contenir une majuscule';
+                      }
+                      if (!RegExp(r'[a-z]').hasMatch(value)) {
+                        return 'Doit contenir une minuscule';
+                      }
+                      if (!RegExp(r'[0-9]').hasMatch(value)) {
+                        return 'Doit contenir un chiffre';
+                      }
+                      if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(value)) {
+                        return 'Doit contenir un caractère spécial';
                       }
                       return null;
                     },

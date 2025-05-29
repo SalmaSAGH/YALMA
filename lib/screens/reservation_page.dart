@@ -35,7 +35,7 @@ class _ReservationPageState extends State<ReservationPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isTaxi ? 'Réservation de taxi' : 'Détails de Réservation'),
+        title: Text(widget.isTaxi ? 'Réservation du Driver' : 'Détails de Réservation'),
       ),
       body: SingleChildScrollView(  // Added SingleChildScrollView to handle overflow
         padding: const EdgeInsets.all(16.0),
@@ -116,7 +116,7 @@ class _ReservationPageState extends State<ReservationPage> {
                     Provider.of<TicketProvider>(context, listen: false).addTicket(ticket);
 
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Votre taxi a été réservé!')),
+                      const SnackBar(content: Text('Votre Driver a été réservé!')),
                     );
                   } else {
                     // Logique existante pour les transports en commun

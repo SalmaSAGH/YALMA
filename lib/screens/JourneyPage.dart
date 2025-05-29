@@ -210,7 +210,6 @@ class _JourneyPageState extends State<JourneyPage> {
 
   Future<void> _getRouteDirections() async {
     if (_currentPosition == null || _destination == null) return;
-
     try {
       if (_selectedRouteType == 'transit' && await _isDifferentCity(_destination!)) {
         await _getIntercityRoute();

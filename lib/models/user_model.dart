@@ -4,7 +4,7 @@ class User {
   final String fullName;
   final String email;
   final String password;
-  final String phone; // Nouveau champ ajouté
+  final String phone;
   final BankAccount? bankAccount;
 
   User({

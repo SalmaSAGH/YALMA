@@ -100,9 +100,8 @@ class _HomePageState extends State<HomePage> {
     _mapController = controller;
   }
 
-  // Nouvelle fonction pour gérer le tap sur la carte
+  // fonction pour gérer le tap sur la carte
   Future<void> _onMapTapped(LatLng tappedPoint) async {
-    // Utiliser l'API Nominatim pour obtenir l'adresse de l'endroit
     final url = Uri.parse(
         'https://nominatim.openstreetmap.org/reverse?lat=${tappedPoint.latitude}&lon=${tappedPoint.longitude}&format=json&addressdetails=1');
 

@@ -219,44 +219,37 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerPr
           ),
         ),
         Expanded(
-          child: isCarTrip ? _buildCarView() : _buildPublicTransportView(steps),
+          child: isCarTrip ? SingleChildScrollView(child: _buildCarView()) : _buildPublicTransportView(steps),
         ),
       ],
     );
   }
 
   Widget _buildCarView() {
-    return Column(
-      children: [
-        Expanded(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildLocationCard(
-                  Icons.location_on,
-                  'Départ',
-                  widget.startAddress,
-                  widget.departureTime,
-                  Colors.purple,
-                ),
-                const SizedBox(height: 24),
-                const Icon(Icons.arrow_downward, size: 36, color: Colors.purple),
-                const SizedBox(height: 24),
-                _buildLocationCard(
-                  Icons.flag,
-                  'Arrivée',
-                  widget.endAddress,
-                  widget.arrivalTime,
-                  Colors.purple,
-                ),
-              ],
-            ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 32, left: 16, right: 16, bottom: 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildLocationCard(
+            Icons.location_on,
+            'Départ',
+            widget.startAddress,
+            widget.departureTime,
+            Colors.purple,
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: ElevatedButton(
+          const SizedBox(height: 24),
+          const Icon(Icons.arrow_downward, size: 36, color: Colors.purple),
+          const SizedBox(height: 24),
+          _buildLocationCard(
+            Icons.flag,
+            'Arrivée',
+            widget.endAddress,
+            widget.arrivalTime,
+            Colors.purple,
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.purple,
               minimumSize: const Size(double.infinity, 50),
@@ -266,7 +259,7 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerPr
             ),
             onPressed: () => _showTaxiReservation(context),
             child: const Text(
-              'Réserver un taxi',
+              'Réserver un Driver',
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.white,
@@ -274,8 +267,8 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerPr
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -296,7 +289,6 @@ class _RouteDetailsPageState extends State<RouteDetailsPage> with SingleTickerPr
       Color color,
       ) {
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
       elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16),

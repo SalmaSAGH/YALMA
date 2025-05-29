@@ -11,7 +11,7 @@ class TicketDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(ticket.isTaxi ? "Détail du taxi" : "Détail du billet")),
+      appBar: AppBar(title: Text(ticket.isTaxi ? "Détail du Driver" : "Détail du billet")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
