@@ -17,6 +17,10 @@ class _ManageAccountPageState extends State<ManageAccountPage> {
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  bool _obscureOld = true;
+  bool _obscureNew = true;
+  bool _obscureConfirm = true;
+
   User? _currentUser;
 
   @override
@@ -33,12 +37,9 @@ class _ManageAccountPageState extends State<ManageAccountPage> {
         _emailController.text = user.email;
         _phoneController.text = user.phone;
       });
-    } else {
-      debugPrint("Aucun utilisateur actuellement connecté !");
     }
   }
 
-  // 🔐 Vérification de la complexité du mot de passe
   bool _isStrongPassword(String password) {
     final hasMinLength = password.length >= 12;
     final hasUppercase = password.contains(RegExp(r'[A-Z]'));
@@ -56,7 +57,7 @@ class _ManageAccountPageState extends State<ManageAccountPage> {
 
     if (oldPwdInput != storedPwd) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ancien mot de passe incorrect')),
+        const SnackBar(content: Text('Incorrect old password')),
       );
       return;
     }
@@ -64,16 +65,18 @@ class _ManageAccountPageState extends State<ManageAccountPage> {
     if (_newPasswordController.text.isNotEmpty) {
       if (!_isStrongPassword(_newPasswordController.text)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(
-              'Le mot de passe doit contenir au moins 12 caractères, avec majuscules, minuscules, chiffres et symboles.'
-          )),
+          const SnackBar(
+            content: Text(
+              'Password must be at least 12 characters long and include uppercase, lowercase, numbers, and special characters.',
+            ),
+          ),
         );
         return;
       }
 
       if (_newPasswordController.text != _confirmPasswordController.text) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Les nouveaux mots de passe ne correspondent pas')),
+          const SnackBar(content: Text('New passwords do not match')),
         );
         return;
       }
@@ -92,24 +95,62 @@ class _ManageAccountPageState extends State<ManageAccountPage> {
     try {
       await LocalStorageService.updateCurrentUser(updatedUser);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Compte mis à jour avec succès')),
+        const SnackBar(content: Text('Account updated successfully')),
       );
       Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur : $e')),
+        SnackBar(content: Text('Error: $e')),
       );
     }
   }
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _phoneController.dispose();
-    _oldPasswordController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    bool obscure = false,
+    VoidCallback? toggleObscure,
+    String? helperText,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFF2F2F7),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: TextFormField(
+            controller: controller,
+            obscureText: obscure,
+            decoration: InputDecoration(
+              labelText: label,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              floatingLabelBehavior: FloatingLabelBehavior.never,
+              suffixIcon: toggleObscure != null
+                  ? IconButton(
+                icon: Icon(
+                  obscure ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.grey,
+                ),
+                onPressed: toggleObscure,
+              )
+                  : null,
+            ),
+            validator: (value) => value == null || value.isEmpty ? 'Required field' : null,
+          ),
+        ),
+        if (helperText != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 8),
+            child: Text(
+              helperText,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ),
+      ],
+    );
   }
 
   @override
@@ -119,51 +160,58 @@ class _ManageAccountPageState extends State<ManageAccountPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Gérer mon compte")),
+      appBar: AppBar(title: const Text("Manage My Account")),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: ListView(
             children: [
-              const SizedBox(height: 20),
-              TextFormField(
+              _buildTextField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-                validator: (value) =>
-                value == null || value.isEmpty ? 'Veuillez entrer un email' : null,
+                label: 'Email',
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              _buildTextField(
                 controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Téléphone'),
-                validator: (value) =>
-                value == null || value.isEmpty ? 'Veuillez entrer un numéro' : null,
+                label: 'Phone number',
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              _buildTextField(
                 controller: _oldPasswordController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Ancien mot de passe'),
-                validator: (value) =>
-                value == null || value.isEmpty ? 'Obligatoire pour modifier' : null,
+                label: 'Old password',
+                obscure: _obscureOld,
+                toggleObscure: () => setState(() => _obscureOld = !_obscureOld),
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              _buildTextField(
                 controller: _newPasswordController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Nouveau mot de passe (optionnel)'),
+                label: 'New password (min. 12 characters)',
+                obscure: _obscureNew,
+                toggleObscure: () => setState(() => _obscureNew = !_obscureNew),
+                helperText: 'Must include uppercase, lowercase, number, special character',
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              _buildTextField(
                 controller: _confirmPasswordController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Confirmer nouveau mot de passe'),
+                label: 'Confirm new password',
+                obscure: _obscureConfirm,
+                toggleObscure: () => setState(() => _obscureConfirm = !_obscureConfirm),
               ),
               const SizedBox(height: 30),
               ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF007AFF),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
                 onPressed: _updateAccount,
-                child: const Text('Enregistrer'),
+                child: const Text(
+                  'Save',
+                  style: TextStyle(fontSize: 18, color: Colors.white),
+                ),
               ),
             ],
           ),
