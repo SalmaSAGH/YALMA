@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'MyTicketsPage.dart';
 import 'manage_account_page.dart';
-import 'personal_criteria_page.dart'; // Nouvel import
+import 'personal_criteria_page.dart';
+import '../services/local_storage_service.dart';
+import 'login_screen.dart';
+import '../providers/ThemeProvider.dart'; // 👈 Pour accéder à ThemeProvider
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -13,7 +17,6 @@ class ProfilePage extends StatelessWidget {
         child: Column(
           children: [
             const SizedBox(height: 20),
-            // Avatar et Titre
             Column(
               children: const [
                 CircleAvatar(
@@ -29,7 +32,6 @@ class ProfilePage extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 30),
-            // Paramètres
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -50,14 +52,20 @@ class ProfilePage extends StatelessWidget {
                     "Personal criteria",
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const PersonalCriteriaPage(),
-                      ),
+                      MaterialPageRoute(builder: (context) => const PersonalCriteriaPage()),
                     ),
                   ),
-                  _buildListItem(Icons.account_balance_wallet_outlined, "Balance"),
-                  _buildListItem(Icons.link, "Links"),
-                  _buildListItem(Icons.qr_code, "Codes"),
+
+                  // 🌗 Mode Sombre / Clair
+                  Consumer<ThemeProvider>(
+                    builder: (context, themeProvider, child) => SwitchListTile(
+                      secondary: const Icon(Icons.dark_mode),
+                      title: const Text('Dark Mode'),
+                      value: themeProvider.isDarkMode,
+                      onChanged: (value) => themeProvider.toggleTheme(value),
+                    ),
+                  ),
+
                   const SizedBox(height: 30),
                   const Text("Advises", style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
@@ -69,8 +77,20 @@ class ProfilePage extends StatelessWidget {
                       MaterialPageRoute(builder: (_) => const MyTicketsPage()),
                     ),
                   ),
-
-                  _buildListItem(Icons.support_agent, "Support"),
+                  const SizedBox(height: 30),
+                  const Divider(),
+                  _buildListItem(
+                    Icons.logout,
+                    "Log out",
+                    onTap: () async {
+                      await LocalStorageService.clearCurrentUser();
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            (route) => false,
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -80,12 +100,12 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildListItem(IconData icon, String title, {VoidCallback? onTap}) {
+  static Widget _buildListItem(IconData icon, String title, {VoidCallback? onTap}) {
     return ListTile(
       leading: Icon(icon),
       title: Text(title),
       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: onTap ?? () {}, // Utilise le callback fourni ou une fonction vide
+      onTap: onTap ?? () {},
     );
   }
 }

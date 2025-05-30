@@ -6,8 +6,9 @@ import 'package:transport_app/screens/login_screen.dart';
 import 'package:transport_app/screens/signup_screen.dart';
 import 'package:transport_app/screens/welcome_screen.dart';
 import 'package:transport_app/services/local_storage_service.dart';
-import 'package:transport_app/providers/ticket_provider.dart'; // <-- AJOUT
-import 'screens/splash_screen.dart';
+import 'package:transport_app/providers/ticket_provider.dart';
+import 'package:transport_app/screens/splash_screen.dart';
+import 'package:transport_app/providers/ThemeProvider.dart'; // <-- Ajout pour ThemeProvider
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +20,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => TicketProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()), // <-- Ajout
       ],
       child: const MyApp(),
     ),
@@ -30,22 +32,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Transport App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        tabBarTheme: const TabBarTheme(
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicator: UnderlineTabIndicator(
-            borderSide: BorderSide(
-              color: Colors.white,
-              width: 2.0,
-            ),
-          ),
-        ),
-      ),
+      themeMode: themeProvider.themeMode, // <-- Gère dark/light
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
+      themeAnimationDuration: const Duration(milliseconds: 300),
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
@@ -54,9 +49,6 @@ class MyApp extends StatelessWidget {
         '/signup': (context) => const SignUpScreen(),
         '/home': (context) => const HomePage(),
         '/admin': (context) => const AdminScreen(),
-      },
-      onGenerateRoute: (settings) {
-        return null;
       },
       onUnknownRoute: (settings) {
         return MaterialPageRoute(
