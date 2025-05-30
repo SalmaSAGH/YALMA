@@ -38,14 +38,21 @@ class _ManageAccountPageState extends State<ManageAccountPage> {
     }
   }
 
+  // 🔐 Vérification de la complexité du mot de passe
+  bool _isStrongPassword(String password) {
+    final hasMinLength = password.length >= 12;
+    final hasUppercase = password.contains(RegExp(r'[A-Z]'));
+    final hasLowercase = password.contains(RegExp(r'[a-z]'));
+    final hasDigit = password.contains(RegExp(r'[0-9]'));
+    final hasSpecialChar = password.contains(RegExp(r'[!@#\$&*~%^+=?/.,;:{}()\[\]<>_\-]'));
+    return hasMinLength && hasUppercase && hasLowercase && hasDigit && hasSpecialChar;
+  }
+
   Future<void> _updateAccount() async {
     if (!_formKey.currentState!.validate()) return;
 
     final oldPwdInput = _oldPasswordController.text.trim();
     final storedPwd = _currentUser?.password.trim();
-
-    debugPrint("Mot de passe saisi : '$oldPwdInput'");
-    debugPrint("Mot de passe enregistré : '$storedPwd'");
 
     if (oldPwdInput != storedPwd) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -54,11 +61,22 @@ class _ManageAccountPageState extends State<ManageAccountPage> {
       return;
     }
 
-    if (_newPasswordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Les nouveaux mots de passe ne correspondent pas')),
-      );
-      return;
+    if (_newPasswordController.text.isNotEmpty) {
+      if (!_isStrongPassword(_newPasswordController.text)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(
+              'Le mot de passe doit contenir au moins 12 caractères, avec majuscules, minuscules, chiffres et symboles.'
+          )),
+        );
+        return;
+      }
+
+      if (_newPasswordController.text != _confirmPasswordController.text) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Les nouveaux mots de passe ne correspondent pas')),
+        );
+        return;
+      }
     }
 
     final updatedUser = User(
@@ -112,26 +130,23 @@ class _ManageAccountPageState extends State<ManageAccountPage> {
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: 'Email'),
-                validator: (value) => value == null || value.isEmpty
-                    ? 'Veuillez entrer un email'
-                    : null,
+                validator: (value) =>
+                value == null || value.isEmpty ? 'Veuillez entrer un email' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _phoneController,
                 decoration: const InputDecoration(labelText: 'Téléphone'),
-                validator: (value) => value == null || value.isEmpty
-                    ? 'Veuillez entrer un numéro'
-                    : null,
+                validator: (value) =>
+                value == null || value.isEmpty ? 'Veuillez entrer un numéro' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _oldPasswordController,
                 obscureText: true,
                 decoration: const InputDecoration(labelText: 'Ancien mot de passe'),
-                validator: (value) => value == null || value.isEmpty
-                    ? 'Obligatoire pour modifier'
-                    : null,
+                validator: (value) =>
+                value == null || value.isEmpty ? 'Obligatoire pour modifier' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
