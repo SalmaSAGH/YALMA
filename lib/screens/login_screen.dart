@@ -55,6 +55,9 @@ class _LoginScreenState extends State<LoginScreen> {
         );
 
         if (user.email.isNotEmpty) {
+          // ✅ Sauvegarder l'utilisateur connecté
+          await LocalStorageService.setCurrentUser(user);
+
           if (AdminService.isAdmin(user)) {
             if (mounted) {
               Navigator.pushReplacement(
@@ -111,7 +114,6 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 20),
-              // Logo
               Image.asset(
                 'assets/logo2.png',
                 height: 100,
@@ -120,8 +122,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
               ),
               const SizedBox(height: 30),
-
-              // Email Input
               Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFFF2F2F7),
@@ -133,10 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     labelText: 'Email',
                     hintText: 'exemple@domaine.com',
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 18,
-                    ),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 18),
                     floatingLabelBehavior: FloatingLabelBehavior.never,
                   ),
                   keyboardType: TextInputType.emailAddress,
@@ -153,8 +150,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Password Input
               Container(
                 decoration: BoxDecoration(
                   color: const Color(0xFFF2F2F7),
@@ -166,10 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: InputDecoration(
                     labelText: 'Password',
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 18,
-                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
                     floatingLabelBehavior: FloatingLabelBehavior.never,
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -189,25 +181,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-
-              // Forgot Password Link
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {
-                    // Navigate to forgot password screen
+                    // Page mot de passe oublié
                   },
                   child: const Text(
                     'Forgot your password?',
-                    style: TextStyle(
-                      color: Color(0xFF007AFF),
-                    ),
+                    style: TextStyle(color: Color(0xFF007AFF)),
                   ),
                 ),
               ),
-              const SizedBox(height:20),
-
-              // Login Button
+              const SizedBox(height: 20),
               SizedBox(
                 width: 200,
                 child: ElevatedButton(
@@ -232,24 +218,17 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // Divider with "Or"
               Row(
                 children: [
                   const Expanded(child: Divider()),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Text(
-                      'Or',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    child: Text('Or', style: Theme.of(context).textTheme.bodySmall),
                   ),
                   const Expanded(child: Divider()),
                 ],
               ),
               const SizedBox(height: 20),
-
-              // Social Login Buttons
               _buildSocialButton(
                 icon: 'assets/google.png',
                 text: 'Continue with Google',
@@ -260,7 +239,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 textColor: Colors.black87,
               ),
               const SizedBox(height: 15),
-
               _buildSocialButton(
                 icon: 'assets/facebook.png',
                 text: 'Continue with Facebook',
@@ -271,29 +249,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 textColor: Colors.black87,
               ),
               const SizedBox(height: 15),
-
-              // Sign Up Link
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    "Vous n'avez pas de compte?",
-                    style: TextStyle(color: Colors.grey),
-                  ),
+                  const Text("Vous n'avez pas de compte ?", style: TextStyle(color: Colors.grey)),
                   TextButton(
                     onPressed: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => const SignUpScreen(),
-                        ),
+                        MaterialPageRoute(builder: (context) => const SignUpScreen()),
                       );
                     },
                     child: const Text(
                       'Inscrivez-vous',
-                      style: TextStyle(
-                        color: Color(0xFF007AFF),
-                      ),
+                      style: TextStyle(color: Color(0xFF007AFF)),
                     ),
                   ),
                 ],
@@ -318,9 +287,7 @@ class _LoginScreenState extends State<LoginScreen> {
         backgroundColor: color,
         padding: const EdgeInsets.symmetric(vertical: 12),
         side: BorderSide(color: Colors.grey.shade300),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -329,18 +296,10 @@ class _LoginScreenState extends State<LoginScreen> {
             icon,
             height: 24,
             width: 24,
-            errorBuilder: (context, error, stackTrace) {
-              return const Icon(Icons.error);
-            },
+            errorBuilder: (context, error, stackTrace) => const Icon(Icons.error),
           ),
           const SizedBox(width: 10),
-          Text(
-            text,
-            style: TextStyle(
-              color: textColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          Text(text, style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
         ],
       ),
     );

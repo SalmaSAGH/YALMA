@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'MyTicketsPage.dart';
+import 'manage_account_page.dart';
 import 'personal_criteria_page.dart'; // Nouvel import
 
 class ProfilePage extends StatelessWidget {
@@ -35,7 +36,14 @@ class ProfilePage extends StatelessWidget {
                 children: [
                   const Text("Settings", style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
-                  _buildListItem(Icons.person_outline, "Manage my account"),
+                  _buildListItem(
+                    Icons.person_outline,
+                    "Manage my account",
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ManageAccountPage()),
+                    ),
+                  ),
                   _buildListItem(Icons.lock_outline, "Privacy and safety"),
                   _buildListItem(
                     Icons.directions_walk,
