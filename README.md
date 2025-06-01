@@ -33,7 +33,6 @@ YALMApp est une application mobile développée avec Flutter, conçue pour facil
 
 - Flutter SDK installé
 - Android Studio ou VS Code
-- Compte Firebase (si authentification à configurer)
 - Clés API Google Maps activées dans `android/app/src/main/AndroidManifest.xml`
 
 ### Étapes
